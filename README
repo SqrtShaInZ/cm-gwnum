@@ -1,0 +1,17 @@
+# cm-gwnum
+A fork of [Enge's CM](https://gitlab.inria.fr/enge/cm) that injects George Woltman's `gwnum`.
+
+Feel free to contribute through pull requests and issues. AI coding is allowed, provided enough debug is performed.
+
+---
+
+The CM software implements the construction of ring class fields of
+imaginary quadratic number fields and of elliptic curves with complex
+multiplication via floating point approximations. It consists of libraries
+that can be called from within a C program and of executable command
+line applications.
+
+For more details, please see the texinfo documentation provided with
+the software or available at the website
+   http://www.multiprecision.org/cm/
+
