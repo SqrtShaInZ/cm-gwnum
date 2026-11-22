@@ -282,8 +282,8 @@ void cm_mpi_broadcast_N (mpz_srcptr N, unsigned int e,
          MPI_COMM_WORLD);
    mpi_bcast_send_mpz (N, MPI_COMM_WORLD);
    MPI_Bcast (&e, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+   mpi_bcast_send_mpz (r, MPI_COMM_WORLD);
    if (e > 1) {
-      mpi_bcast_send_mpz (r, MPI_COMM_WORLD);
       mpi_bcast_send_mpz (z, MPI_COMM_WORLD);
    }
 }
@@ -698,8 +698,8 @@ static void mpi_worker ()
       case MPI_TAG_JOB_BROADCAST_N:
          mpi_bcast_recv_mpz (N, MPI_COMM_WORLD);
          MPI_Bcast (&e, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+         mpi_bcast_recv_mpz (r, MPI_COMM_WORLD);
          if (e > 1) {
-            mpi_bcast_recv_mpz (r, MPI_COMM_WORLD);
             mpi_bcast_recv_mpz (z, MPI_COMM_WORLD);
          }
          break;
@@ -774,7 +774,8 @@ static void mpi_worker ()
             &status);
 
          /* Compute the result. */
-         cm_nt_mpz_tonelli_si_with_generator (root, a, N, e, r, z);
+         cm_nt_mpz_tonelli_si_with_generator (root, a,
+            cm_gw_ctx_get (&ctx, N), e, r, z);
 
          /* Notify and send the result. */
          MPI_Send (&job, 1, MPI_INT, 0, MPI_TAG_JOB_TONELLI, MPI_COMM_WORLD);

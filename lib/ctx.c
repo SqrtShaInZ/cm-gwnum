@@ -87,7 +87,13 @@ void cm_mpz_powm (cm_gw_ctx_t *ctx, mpz_ptr z, mpz_srcptr a,
    mpz_srcptr e, mpz_srcptr p)
 {
    cm_gw_ctx_get (ctx, p);
-   gw_powm (ctx, z, a, e);
+   cm_gw_powm (&ctx->gwdata, z, a, e, p);
+}
+
+void cm_gw_powm (gwhandle *gwdata, mpz_ptr z, mpz_srcptr a,
+   mpz_srcptr e, mpz_srcptr p)
+{
+   gw_powm (gwdata, z, a, e, p);
 }
 
 int cm_nt_is_prime (cm_gw_ctx_t *ctx, mpz_srcptr n)

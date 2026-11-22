@@ -668,10 +668,19 @@ static void compute_qroot (mpz_t *qroot, long int *qstar, int no_qstar,
 
 #ifndef WITH_MPI
    cm_timer_continue (stat->timer [0]);
-#pragma omp parallel for num_threads(8)
-   for (i = 0; i < no_qstar; i++)
-      cm_nt_mpz_tonelli_si_with_generator (qroot [i], qstar [i],
-         p, e, r, z);
+#pragma omp parallel num_threads(8)
+   {
+      cm_gw_ctx_t gw_ctx;
+      gwhandle *gwdata;
+
+      cm_gw_ctx_init (&gw_ctx);
+      gwdata = cm_gw_ctx_get (&gw_ctx, p);
+#pragma omp for
+      for (i = 0; i < no_qstar; i++)
+         cm_nt_mpz_tonelli_si_with_generator (qroot [i], qstar [i],
+            gwdata, e, r, z);
+      cm_gw_ctx_clear (&gw_ctx);
+   }
    cm_timer_stop (stat->timer [0]);
 #else
    sent = 0;

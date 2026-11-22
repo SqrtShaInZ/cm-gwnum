@@ -349,8 +349,8 @@ unsigned int cm_nt_mpz_tonelli_generator (mpz_ptr q, mpz_ptr z, mpz_srcptr p)
    /* For p an odd prime, compute and return e such that p-1 = 2^e * q. */
 {
    unsigned int e = mpz_scan1 (p, 1);
+   mpz_tdiv_q_2exp (q, p, e);
    if (e > 1) {
-      mpz_tdiv_q_2exp (q, p, e);
       for (mpz_set_ui (z, 2ul); mpz_legendre (z, p) != -1;
          mpz_add_ui (z, z, 1ul));
       cm_nt_powmod (z, z, q, p);
@@ -413,8 +413,9 @@ void cm_nt_mpz_tonelli_with_generator_unnormalized (mpz_ptr root, mpz_srcptr a,
    mpz_clear (b); mpz_clear (tmp);
 }
 
-void cm_nt_mpz_tonelli_with_generator (mpz_ptr root, mpz_srcptr a,
-   mpz_srcptr p, unsigned int e, mpz_srcptr q, mpz_srcptr z)
+static void cm_nt_mpz_tonelli_with_generator_internal (mpz_ptr root,
+   mpz_srcptr a, mpz_srcptr p, unsigned int e, mpz_srcptr q, mpz_srcptr z,
+   gwhandle *gwdata)
    /* Compute a square root of a modulo p by the Tonelli-Shanks algorithm. */
 {
    mpz_t a_local, y, x, b, tmp;
@@ -427,13 +428,19 @@ void cm_nt_mpz_tonelli_with_generator (mpz_ptr root, mpz_srcptr a,
    if (e == 1) {
       mpz_add_ui (tmp, p, 1ul);
       mpz_tdiv_q_2exp (tmp, tmp, 2ul);
-      cm_nt_powmod (x, a_local, tmp, p);
+      if (gwdata != NULL)
+         cm_gw_powm (gwdata, x, a_local, tmp, p);
+      else
+         cm_nt_powmod (x, a_local, tmp, p);
    }
    else {
       mpz_set (y, z); r = e;
       mpz_sub_ui (tmp, q, 1ul);
       mpz_tdiv_q_2exp (tmp, tmp, 1ul);
-      cm_nt_powmod (x, a_local, tmp, p);
+      if (gwdata != NULL)
+         cm_gw_powm (gwdata, x, a_local, tmp, p);
+      else
+         cm_nt_powmod (x, a_local, tmp, p);
       mpz_mul (b, x, x); mpz_mod (b, b, p);
       mpz_mul (b, b, a_local); mpz_mod (b, b, p);
       mpz_mul (x, x, a_local); mpz_mod (x, x, p);
@@ -465,13 +472,28 @@ void cm_nt_mpz_tonelli_with_generator (mpz_ptr root, mpz_srcptr a,
 
 /*****************************************************************************/
 
+void cm_nt_mpz_tonelli_with_generator (mpz_ptr root, mpz_srcptr a,
+   gwhandle *gwdata, unsigned int e, mpz_srcptr q, mpz_srcptr z)
+{
+   mpz_t p;
+
+   mpz_init (p);
+   mpz_mul_2exp (p, q, e);
+   mpz_add_ui (p, p, 1);
+   cm_nt_mpz_tonelli_with_generator_internal (root, a, p, e, q, z,
+      gwdata);
+   mpz_clear (p);
+}
+
+/*****************************************************************************/
+
 void cm_nt_mpz_tonelli (mpz_ptr root, mpz_srcptr a, mpz_srcptr p)
 {
    unsigned int e;
    mpz_t q, z;
    mpz_init (q); mpz_init (z);
    e = cm_nt_mpz_tonelli_generator (q, z, p);
-   cm_nt_mpz_tonelli_with_generator (root, a, p, e, q, z);
+   cm_nt_mpz_tonelli_with_generator_internal (root, a, p, e, q, z, NULL);
    mpz_clear (q); mpz_clear (z);
 }
 
@@ -628,13 +650,13 @@ cleanup:
 /*****************************************************************************/
 
 void cm_nt_mpz_tonelli_si_with_generator (mpz_ptr root,
-   const long int a, mpz_srcptr p, unsigned int e, mpz_srcptr q,
+   const long int a, gwhandle *gwdata, unsigned int e, mpz_srcptr q,
    mpz_srcptr z)
 {
    mpz_t tmp_a;
 
    mpz_init_set_si (tmp_a, a);
-   cm_nt_mpz_tonelli_with_generator (root, tmp_a, p, e, q, z);
+   cm_nt_mpz_tonelli_with_generator (root, tmp_a, gwdata, e, q, z);
    mpz_clear (tmp_a);
 }
 

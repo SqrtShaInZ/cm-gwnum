@@ -59,6 +59,8 @@ typedef struct cm_gw_ctx_t {
 extern void cm_gw_ctx_init (cm_gw_ctx_t *ctx);
 extern void cm_gw_ctx_clear (cm_gw_ctx_t *ctx);
 extern gwhandle *cm_gw_ctx_get (cm_gw_ctx_t *ctx, mpz_srcptr p);
+extern void cm_gw_powm (gwhandle *gwdata, mpz_ptr z, mpz_srcptr a,
+   mpz_srcptr e, mpz_srcptr p);
 
 typedef struct {
    cm_modular_t m;
@@ -107,7 +109,7 @@ extern uint_cl_t cm_nt_largest_factor (uint_cl_t n);
 extern unsigned int cm_nt_mpz_tonelli_generator (mpz_ptr q, mpz_ptr z,
    mpz_srcptr p);
 extern void cm_nt_mpz_tonelli_si_with_generator (mpz_ptr root,
-   const long int a, mpz_srcptr p, unsigned int e, mpz_srcptr q,
+   const long int a, gwhandle *gwdata, unsigned int e, mpz_srcptr q,
    mpz_srcptr z);
 extern void cm_nt_mpz_tonelli (mpz_ptr root, mpz_srcptr a, mpz_srcptr p);
 extern void cm_nt_mpz_tonelli_si (mpz_ptr root, const long int a,
@@ -115,7 +117,7 @@ extern void cm_nt_mpz_tonelli_si (mpz_ptr root, const long int a,
 extern void cm_nt_mpz_tonelli_with_generator_unnormalized (mpz_ptr root, mpz_srcptr a,
    mpz_srcptr p, unsigned int e, mpz_srcptr q, mpz_srcptr z);
 extern void cm_nt_mpz_tonelli_with_generator (mpz_ptr root, mpz_srcptr a,
-   mpz_srcptr p, unsigned int e, mpz_srcptr q, mpz_srcptr z);
+   gwhandle *gwdata, unsigned int e, mpz_srcptr q, mpz_srcptr z);
 extern bool cm_nt_mpz_cuberoot (mpz_ptr root, mpz_srcptr a, mpz_srcptr p);
 extern void cm_nt_mpz_tree_gcd (mpz_t *gcd, mpz_srcptr n, mpz_t *m,
    int no_m, bool ecm);
