@@ -259,7 +259,7 @@ int main (void)
    int major, minor, patch;
    if (sscanf (ecm_version (), "%d.%d.%d", &major, &minor, &patch) != 3)
       return 1;
-   return (10000 * major + 100 * minor + patch < 704);
+   return (10000 * major + 100 * minor + patch < 70004);
 }
         ]])],
         [AC_MSG_RESULT(yes)],
