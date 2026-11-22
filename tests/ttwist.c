@@ -40,9 +40,9 @@ static void test_curve (int_cl_t d, mpz_srcptr p, mpz_srcptr l,
    mpz_init (x);
    mpz_init (y);
    
-   printf ("p="); mpz_out_str (stdout, 10, p); printf ("\n");
-   printf ("l="); mpz_out_str (stdout, 10, l); printf ("\n");
-   printf ("c="); mpz_out_str (stdout, 10, co); printf ("\n");
+   //printf ("p="); mpz_out_str (stdout, 10, p); printf ("\n");
+   //printf ("l="); mpz_out_str (stdout, 10, l); printf ("\n");
+   //printf ("c="); mpz_out_str (stdout, 10, co); printf ("\n");
    cm_param_init (param, d, CM_INVARIANT_J, 0, CM_SUBFIELD_NEVER, false);
    cm_class_init (c, param, false);
    cm_class_compute (c, param, false, true, false);
