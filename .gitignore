@@ -23,7 +23,6 @@ tests/tecpp
 .libs/
 autom4te.cache/
 build-aux/
-m4/
 
 # Autotools generated scripts & configuration files
 /aclocal.m4
