@@ -1,9 +1,15 @@
 # cm-gwnum
 A fork of [Enge's CM](https://gitlab.inria.fr/enge/cm) that injects George Woltman's `gwnum`.
 
-Feel free to contribute through pull requests and issues. AI coding is allowed, provided enough debug is performed.
+## Features (compared to the original version)
+
+* `gwhandle` caching across MPI workers and each step
+* cube root extraction for faster cubic polynomial root finding (see [lib/mpzx.c](lib/mpzx.c))
 
 ## Install instructions
+
+This library is static-only. You cannot use `--enable-shared` to make it shared because gwnum is not a shared library.
+
 Before compiling, make sure to replace the following headers with the ones used to build gwnum.a:
 
 * [lib/giants.h](lib/giants.h)
@@ -18,9 +24,13 @@ Before compiling, make sure to replace the following headers with the ones used 
 
 You also need to have a copy or symlink to gwnum.a named libgwnum.a, so `$CC $CFLAGS -lgwnum` is able to detect it.
 
-If you built from the source tree, you will need to run `autoreconf`.
+If you are building from the source tree, you will need to run `autoreconf`.
 
 After that, type `./configure && make` to build the package, and (`sudo`) `make install` to install the package at `$PREFIX`.
+
+## Contribution
+
+Feel free to contribute through pull requests and issues. AI coding is allowed, provided enough debug is performed.
 
 ## Original description
 

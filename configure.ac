@@ -103,7 +103,16 @@ gl_VALGRIND_TESTS_DEFAULT_NO
 gl_VALGRIND_TESTS
 
 # Set up LibTool
-LT_INIT
+LT_INIT([disable-shared])
+
+# Shared libraries are not supported.  Reset and enforce Libtool's static-only
+# mode even if a caller passes a shared-library or static-library option.
+AS_IF([test "x$enable_shared" = xyes],
+   [AC_MSG_ERROR([shared libraries are not supported])])
+enable_shared=no
+enable_static=yes
+build_libtool_libs=no
+build_old_libs=yes
 
 # Check GMP Header
 AC_MSG_CHECKING(for gmp.h)
