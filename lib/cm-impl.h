@@ -50,7 +50,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 extern time_t cm_mpi_zero;
 
-typedef struct {
+typedef struct cm_gw_ctx_t {
    gwhandle gwdata;
    mpz_t cached_p;
    int initialized;

@@ -86,18 +86,12 @@ gwhandle *cm_gw_ctx_get (cm_gw_ctx_t *ctx, mpz_srcptr p)
 void cm_mpz_powm (cm_gw_ctx_t *ctx, mpz_ptr z, mpz_srcptr a,
    mpz_srcptr e, mpz_srcptr p)
 {
-   gwhandle *gwdata = NULL;
-
-   if (mpz_sizeinbase (e, 2) >= GW_THRESHOLD)
-      gwdata = cm_gw_ctx_get (ctx, p);
-   gw_powm (gwdata, z, a, e, p);
+   cm_gw_ctx_get (ctx, p);
+   gw_powm (ctx, z, a, e);
 }
 
 int cm_nt_is_prime (cm_gw_ctx_t *ctx, mpz_srcptr n)
 {
-   gwhandle *gwdata = NULL;
-
-   if (mpz_sizeinbase (n, 2) >= GW_THRESHOLD)
-      gwdata = cm_gw_ctx_get (ctx, n);
-   return gw_prp (gwdata, n);
+   cm_gw_ctx_get (ctx, n);
+   return gw_prp (ctx);
 }

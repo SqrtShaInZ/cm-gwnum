@@ -26,6 +26,7 @@ q prime
 #include "gwthread.h"
 #include "gwcommon.h"
 #include "gw_utility.h"
+#include "cm-impl.h"
 
 #define INI_FFT_SIZE 0 // Increase if trouble
 #define MAX_STRING_LENGTH 131072
@@ -36,8 +37,9 @@ q prime
 
 /*****************************************************************************/
 
-void small_base_exp ( gwhandle *gwdata, mpz_ptr mr, double db, mpz_srcptr me, mpz_srcptr mn )
+void small_base_exp ( gwhandle *gwdata, mpz_ptr mr, double db, mpz_srcptr me, cm_gw_ctx_t *ctx )
 {
+    mpz_srcptr mn = ctx->cached_p;
     int fft_size = INI_FFT_SIZE;
     int string_length;
     int g_length;
@@ -122,8 +124,9 @@ void small_base_exp ( gwhandle *gwdata, mpz_ptr mr, double db, mpz_srcptr me, mp
 
 /*****************************************************************************/
 
-void medium_base_exp ( gwhandle *gwdata, mpz_ptr mr, double db, mpz_srcptr me, mpz_srcptr mn )
+void medium_base_exp ( gwhandle *gwdata, mpz_ptr mr, double db, mpz_srcptr me, cm_gw_ctx_t *ctx )
 {
+    mpz_srcptr mn = ctx->cached_p;
     int fft_size = INI_FFT_SIZE;
     int string_length;
     int g_length;
@@ -201,8 +204,9 @@ void medium_base_exp ( gwhandle *gwdata, mpz_ptr mr, double db, mpz_srcptr me, m
 
 /*****************************************************************************/
 
-void large_base_exp ( gwhandle *gwdata, mpz_ptr mr, mpz_srcptr mb, mpz_srcptr me, mpz_srcptr mn )
+void large_base_exp ( gwhandle *gwdata, mpz_ptr mr, mpz_srcptr mb, mpz_srcptr me, cm_gw_ctx_t *ctx )
 {
+    mpz_srcptr mn = ctx->cached_p;
     int fft_size = INI_FFT_SIZE;
     int string_length;
     int g_length;
@@ -321,8 +325,10 @@ void large_base_exp ( gwhandle *gwdata, mpz_ptr mr, mpz_srcptr mb, mpz_srcptr me
 
 /*****************************************************************************/
 
-int gw_prp ( gwhandle *gwdata, mpz_srcptr mn )
+int gw_prp ( cm_gw_ctx_t *ctx )
 { // base 3 euler
+  gwhandle *gwdata = &ctx->gwdata;
+  mpz_srcptr mn = ctx->cached_p;
   int size = mpz_sizeinbase ( mn, 2 );
   int res = 0;
   mpz_t mr;
@@ -338,7 +344,7 @@ int gw_prp ( gwhandle *gwdata, mpz_srcptr mn )
     }
   else
     {
-      small_base_exp ( gwdata, mr, 3.0, me, mn );
+      small_base_exp ( gwdata, mr, 3.0, me, ctx );
     }
   if ( mpz_cmp_ui ( mr, 1 ) == 0 )
     {
@@ -359,8 +365,10 @@ int gw_prp ( gwhandle *gwdata, mpz_srcptr mn )
 
 /*****************************************************************************/
 
-void gw_powm ( gwhandle *gwdata, mpz_ptr mr, mpz_srcptr mb_inp, mpz_srcptr me, mpz_srcptr mn )
+void gw_powm ( cm_gw_ctx_t *ctx, mpz_ptr mr, mpz_srcptr mb_inp, mpz_srcptr me )
 {
+    gwhandle *gwdata = &ctx->gwdata;
+    mpz_srcptr mn = ctx->cached_p;
     if ( mpz_sizeinbase ( me, 2 ) < GW_THRESHOLD )
     {
         mpz_powm ( mr, mb_inp, me, mn );
@@ -380,16 +388,16 @@ void gw_powm ( gwhandle *gwdata, mpz_ptr mr, mpz_srcptr mb_inp, mpz_srcptr me, m
         db = (double) mpz_get_ui ( mb );
         if ( base_size < 9 )
         {
-            small_base_exp ( gwdata, mr, db, me, mn );
+            small_base_exp ( gwdata, mr, db, me, ctx );
         }
         else
         {
-            medium_base_exp ( gwdata, mr, db, me, mn );
+            medium_base_exp ( gwdata, mr, db, me, ctx );
         }
     }
     else
     {
-        large_base_exp ( gwdata, mr, mb, me, mn );
+        large_base_exp ( gwdata, mr, mb, me, ctx );
     }
     if ( base_sign == -1 && mpz_odd_p ( me ) )
     {
