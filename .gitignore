@@ -8,6 +8,16 @@
 *.dylib
 *.dll
 
+# CM programs
+src/cm
+src/classpol
+src/ecpp
+src/ecpp-mpi
+src/ecpp-check
+tests/tcm
+tests/ttwist
+tests/tecpp
+
 # Autotools / Automake / Libtool directories
 .deps/
 .libs/
