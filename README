@@ -5,6 +5,7 @@ Feel free to contribute through pull requests and issues. AI coding is allowed, 
 
 ## Install instructions
 Before compiling, make sure to replace the following headers with the ones used to build gwnum.a:
+
 * [lib/giants.h](lib/giants.h)
 * [lib/gwbench.h](lib/gwbench.h)
 * [lib/gwcommon.h](lib/gwcommon.h)
