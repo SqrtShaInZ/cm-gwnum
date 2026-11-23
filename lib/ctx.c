@@ -86,8 +86,12 @@ gwhandle *cm_gw_ctx_get (cm_gw_ctx_t *ctx, mpz_srcptr p)
 void cm_mpz_powm (cm_gw_ctx_t *ctx, mpz_ptr z, mpz_srcptr a,
    mpz_srcptr e, mpz_srcptr p)
 {
+   if (mpz_sizeinbase (e, 2) < GW_THRESHOLD) {
+      mpz_powm (z, a, e, p);
+      return;
+   }
    cm_gw_ctx_get (ctx, p);
-   cm_gw_powm (&ctx->gwdata, z, a, e, p);
+   gw_powm (&ctx->gwdata, z, a, e, p);
 }
 
 void cm_gw_powm (gwhandle *gwdata, mpz_ptr z, mpz_srcptr a,
@@ -98,6 +102,23 @@ void cm_gw_powm (gwhandle *gwdata, mpz_ptr z, mpz_srcptr a,
 
 int cm_nt_is_prime (cm_gw_ctx_t *ctx, mpz_srcptr n)
 {
+   if (mpz_sizeinbase (n, 2) < GW_THRESHOLD) {
+      int res = 0;
+      mpz_t r;
+      mpz_t e;
+      mpz_init (r);
+      mpz_init (e);
+      mpz_sub_ui (e, n, 1);
+      mpz_set_ui (r, 3);
+      mpz_tdiv_q_2exp (e, e, 1);
+      mpz_powm (r, r, e, n);
+      if (mpz_cmp_ui (r, 1) == 0) res = 1;
+      else{
+         mpz_add_ui (r, r, 1);
+         if (mpz_cmp (r, n) == 0) res = 1;
+      }
+      return res;
+   }
    cm_gw_ctx_get (ctx, n);
    return gw_prp (ctx);
 }
