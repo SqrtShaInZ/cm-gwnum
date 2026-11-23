@@ -13,7 +13,7 @@ libcm_la_LDFLAGS = -version-info 2:0:1
 
 libcm_la_SOURCES = cm.h cm-arith.h cm-impl.h get_version.c \
    timer.c file.c nt.c ctx.c qdev.c modular.c modpol.c mpzx.c classgroup.c \
-   modclass.c curve.c param.c class.c jmodp.c pari.c \
+   modclass.c curve.c param.c class.c jmodp.c pari.c corn.c \
    ecpp.c flint.c gw_utility.c
 
 if MPI
