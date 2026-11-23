@@ -814,7 +814,9 @@ the first run and read from disk during subsequent runs.  If the
 environment variable is not set, the data is recomputed every time.
 This concerns files named ‘cm_h.dat’ for class numbers and
 ‘cm_prim_xxxx.dat’ for primorials.  The class numbers are stored without
-a header.
+a header.  With MPI-3, when there are at most 16 worker processes and
+they are all on the same node, the primorial limbs are loaded or
+computed once and shared between the workers through MPI shared memory.
 
    Setting this variable also causes checkpoint files named
 ‘cm_factor_xxxxxxxxxxxxxxxx.dat’ to be written to this directory; they
@@ -992,23 +994,23 @@ Node: Applications27361
 Node: classpol28208
 Node: cm31185
 Node: ecpp33886
-Node: ecpp-check38584
-Node: References39930
-Ref: Enge0940041
-Ref: Enge2140226
-Ref: EnGaThZi2040458
-Ref: EnMo0340711
-Ref: EnMo1440996
-Ref: EnSc0441131
-Ref: EnSc1341340
-Ref: FrKlMoWi0441535
-Ref: Gretal2041766
-Ref: HaLePeZi2041900
-Ref: Morain0742156
-Ref: Pari42344
-Ref: Flint42454
-Ref: Primo42555
-Node: Index42668
+Node: ecpp-check38781
+Node: References40127
+Ref: Enge0940238
+Ref: Enge2140423
+Ref: EnGaThZi2040655
+Ref: EnMo0340908
+Ref: EnMo1441193
+Ref: EnSc0441328
+Ref: EnSc1341537
+Ref: FrKlMoWi0441732
+Ref: Gretal2041963
+Ref: HaLePeZi2042097
+Ref: Morain0742353
+Ref: Pari42541
+Ref: Flint42651
+Ref: Primo42752
+Node: Index42865
 
 End Tag Table
 
