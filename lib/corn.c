@@ -125,6 +125,7 @@ mp_size_t gmp_halfgcd(mpz_t a, mpz_t b, mpz_ptr a0, mpz_ptr b0) {
     }
     free(ap);
     free(bp);
+    free(tp);
     return nn;
 }
 
