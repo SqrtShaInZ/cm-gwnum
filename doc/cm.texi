@@ -909,6 +909,9 @@ is not set, the data is recomputed every time.
 This concerns files named @code{cm_h.dat} for class numbers and
 @code{cm_prim_xxxx.dat} for primorials. The class numbers are stored
 without a header.
+With MPI-3, when there are at most 16 worker processes and they are all on
+the same node, the primorial limbs are loaded or computed once and shared
+between the workers through MPI shared memory.
 
 Setting this variable also causes checkpoint files named
 @code{cm_factor_xxxxxxxxxxxxxxxx.dat} to be written to this directory;

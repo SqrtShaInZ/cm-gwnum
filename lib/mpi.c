@@ -25,6 +25,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <ecm.h>
 #include "gwnum.h"
 #include "gw_utility.h"
+#include <limits.h>
+#include <stddef.h>
 
 #define MPI_TAG_FINISH              1
 #define MPI_TAG_DATA                2
@@ -48,6 +50,14 @@ typedef char mpi_name_t [MPI_MAX_PROCESSOR_NAME];
 static int *worker_queue, *worker_queue_local;
 static int worker_queue_size, worker_queue_local_size;
 static MPI_Comm *split_comm;
+#if MPI_VERSION >= 3
+static MPI_Comm worker_shared_comm = MPI_COMM_NULL;
+
+typedef struct {
+   int size;
+   unsigned long int limbs [];
+} mpi_shared_primorial_t;
+#endif
 
 static void mpi_send_mpz (mpz_srcptr z, const int rank,
    const MPI_Comm comm);
@@ -61,6 +71,12 @@ static void mpi_server_clear (const int size);
 static int mpi_compute_split_m (void);
 static MPI_Comm mpi_communicator_split (void);
 static void mpi_communicator_free (void);
+#if MPI_VERSION >= 3
+static void mpi_worker_shared_init (int rank);
+static bool mpi_share_primorial (const char *tmpdir, const int tree_rank,
+   const int rank, mpz_ptr prim, mpz_ptr prim_view, MPI_Win *win,
+   mpz_ptr *prim_for_gcd);
+#endif
 
 /*****************************************************************************/
 /*                                                                           */
@@ -244,6 +260,104 @@ static void mpi_communicator_free (void)
 
    free (split_comm);
 }
+
+#if MPI_VERSION >= 3
+/*****************************************************************************/
+
+static void mpi_worker_shared_init (int rank)
+   /* Create a shared-memory communicator containing only workers. */
+{
+   MPI_Comm workers;
+
+   MPI_Comm_split (MPI_COMM_WORLD, rank == 0 ? MPI_UNDEFINED : 1, rank,
+      &workers);
+   if (rank != 0) {
+      MPI_Comm_split_type (workers, MPI_COMM_TYPE_SHARED, rank, MPI_INFO_NULL,
+         &worker_shared_comm);
+      MPI_Comm_free (&workers);
+   }
+}
+
+/*****************************************************************************/
+
+static bool mpi_share_primorial (const char *tmpdir, const int tree_rank,
+   const int rank, mpz_ptr prim, mpz_ptr prim_view, MPI_Win *win,
+   mpz_ptr *prim_for_gcd)
+   /* On a single node with at most 16 workers, load or compute the shared
+      primorial once and expose its limbs through a shared-memory window. */
+{
+   MPI_Aint bytes, query_bytes;
+   int disp_unit, local_rank, local_size, world_size, prim_size, limbs;
+   void *baseptr;
+   mpi_shared_primorial_t *shared;
+   mpz_t prim_loaded;
+   bool read;
+
+   MPI_Comm_size (MPI_COMM_WORLD, &world_size);
+   MPI_Comm_size (worker_shared_comm, &local_size);
+   if (world_size - 1 > 16 || local_size != world_size - 1)
+      return false;
+
+   MPI_Comm_rank (worker_shared_comm, &local_rank);
+   if (*win != MPI_WIN_NULL) {
+      MPI_Win_free (win);
+      *prim_for_gcd = prim;
+   }
+   prim_size = 0;
+   mpz_init (prim_loaded);
+   if (local_rank == 0) {
+      if (tmpdir)
+         read = cm_file_read_primorial (tmpdir, prim_loaded, tree_rank - 1);
+      else
+         read = false;
+      if (!read)
+         cm_pari_prime_product (prim_loaded,
+            ((unsigned long int) tree_rank - 1) << 29,
+            ((unsigned long int) tree_rank)     << 29);
+      if (tmpdir && !read && rank == tree_rank)
+         cm_file_write_primorial (tmpdir, prim_loaded, tree_rank - 1);
+      prim_size = prim_loaded->_mp_size;
+      if (prim_size <= 0 || prim_size == INT_MIN) {
+         fprintf (stderr, "Invalid primorial size for MPI shared memory.\n");
+         MPI_Abort (MPI_COMM_WORLD, 1);
+      }
+   }
+   MPI_Bcast (&prim_size, 1, MPI_INT, 0, worker_shared_comm);
+
+   limbs = prim_size < 0 ? -prim_size : prim_size;
+   bytes = (MPI_Aint) offsetof (mpi_shared_primorial_t, limbs)
+      + (MPI_Aint) limbs * sizeof (unsigned long int);
+   if (MPI_Win_allocate_shared (local_rank == 0 ? bytes : 0, 1,
+         MPI_INFO_NULL, worker_shared_comm, &baseptr, win) != MPI_SUCCESS) {
+      fprintf (stderr, "Could not allocate MPI shared memory for primorial.\n");
+      MPI_Abort (MPI_COMM_WORLD, 1);
+   }
+   if (MPI_Win_shared_query (*win, 0, &query_bytes, &disp_unit, &baseptr)
+         != MPI_SUCCESS
+         || baseptr == NULL || disp_unit != 1 || query_bytes < bytes) {
+      fprintf (stderr, "Could not access MPI shared memory for primorial.\n");
+      MPI_Abort (MPI_COMM_WORLD, 1);
+   }
+
+   shared = (mpi_shared_primorial_t *) baseptr;
+   if (local_rank == 0) {
+      shared->size = prim_size;
+      memcpy (shared->limbs, prim_loaded->_mp_d,
+         limbs * sizeof (unsigned long int));
+   }
+   MPI_Win_sync (*win);
+   MPI_Barrier (worker_shared_comm);
+   MPI_Win_sync (*win);
+
+   prim_view->_mp_alloc = limbs;
+   prim_view->_mp_size = shared->size;
+   prim_view->_mp_d = shared->limbs;
+   *prim_for_gcd = prim_view;
+   mpz_clear (prim_loaded);
+
+   return true;
+}
+#endif
 
 
 /*****************************************************************************/
@@ -618,7 +732,13 @@ static void mpi_worker ()
    int len;
    char *tmpdir;
    mpz_t prim;
+   mpz_t prim_shared_view;
+   mpz_ptr prim_for_gcd;
    bool read;
+#if MPI_VERSION >= 3
+   MPI_Win prim_win = MPI_WIN_NULL;
+   bool shared_primorial = false;
+#endif
 
    /* Tonelli */
    long int a;
@@ -650,6 +770,7 @@ static void mpi_worker ()
 
    mpz_init (N);
    mpz_init (prim);
+   prim_for_gcd = prim;
    no_qstar = 0;
    qstar = (long int *) malloc (sizeof (size_t));
    qroot = (mpz_t *) malloc (sizeof (size_t));
@@ -745,18 +866,24 @@ static void mpi_worker ()
             If size - 1 is not divisible by m, the last few workers
             do not take part in the computation. */
          if (tree_rank >= 1) {
-            if (tmpdir)
-               read = cm_file_read_primorial (tmpdir, prim, tree_rank - 1);
-            else
-               read = false;
-            if (!read)
-               cm_pari_prime_product (prim,
-                  ((unsigned long int) tree_rank - 1) << 29,
-                  ((unsigned long int) tree_rank)     << 29);
-            if (tmpdir && !read && rank == tree_rank)
-               /* Let only the workers in the first communicator write
-                  the primorial to disk. */
-               cm_file_write_primorial (tmpdir, prim, rank - 1);
+#if MPI_VERSION >= 3
+            shared_primorial = mpi_share_primorial (tmpdir, tree_rank, rank,
+               prim, prim_shared_view, &prim_win, &prim_for_gcd);
+#endif
+            if (!shared_primorial) {
+               if (tmpdir)
+                  read = cm_file_read_primorial (tmpdir, prim, tree_rank - 1);
+               else
+                  read = false;
+               if (!read)
+                  cm_pari_prime_product (prim,
+                     ((unsigned long int) tree_rank - 1) << 29,
+                     ((unsigned long int) tree_rank)     << 29);
+               if (tmpdir && !read && rank == tree_rank)
+                  /* Let only the workers in the first communicator write
+                     the primorial to disk. */
+                  cm_file_write_primorial (tmpdir, prim, rank - 1);
+            }
          }
 
          if (len > 0)
@@ -885,7 +1012,7 @@ static void mpi_worker ()
                mpz_init (gcd [i]);
             }
 
-            cm_nt_mpz_tree_gcd (gcd, prim, m, no_m, false);
+            cm_nt_mpz_tree_gcd (gcd, prim_for_gcd, m, no_m, false);
 
             MPI_Send (&job, 1, MPI_INT, 0, MPI_TAG_JOB_TREE_GCD, tree_comm);
             for (i = 0; i < no_m; i++) {
@@ -913,7 +1040,7 @@ static void mpi_worker ()
                mpz_init (gcd [i]);
             }
 
-            cm_nt_mpz_tree_gcd (gcd, prim, m, no_m, true);
+            cm_nt_mpz_tree_gcd (gcd, prim_for_gcd, m, no_m, true);
 
             MPI_Send (&job, 1, MPI_INT, 0, MPI_TAG_JOB_TREE_GCD_ECM, tree_comm);
             for (i = 0; i < no_m; i++) {
@@ -940,6 +1067,12 @@ static void mpi_worker ()
 
    /* Free split communicators. */
    mpi_communicator_free ();
+
+#if MPI_VERSION >= 3
+   if (prim_win != MPI_WIN_NULL)
+      MPI_Win_free (&prim_win);
+   MPI_Comm_free (&worker_shared_comm);
+#endif
 
    mpz_clear (N);
    mpz_clear (prim);
@@ -1065,6 +1198,10 @@ void cm_mpi_init (bool debug)
       printf ("***** Error: MPI version run with only one core.\n");
       exit (1);
    }
+#if MPI_VERSION >= 3
+   mpi_worker_shared_init (rank);
+#endif
+
    if (rank == 0)
       mpi_server_init (size, debug);
    else
