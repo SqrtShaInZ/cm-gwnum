@@ -685,6 +685,7 @@ void cm_curve_crypto_param (mpz_ptr p, mpz_ptr n, mpz_ptr l, mpz_ptr c,
 
       if (cm_nt_is_prime (&gw_ctx, p))
       {
+         cm_gw_ctx_get (&gw_ctx, p);
          mpz_add_ui (n, p, 1);
          mpz_sub (n, n, u);
          if (curve_is_crypto (l, c, n, d, p, &gw_ctx, verbose))
